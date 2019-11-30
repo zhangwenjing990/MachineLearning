@@ -8,7 +8,7 @@ import pandas as pd
 import tqdm
 
 config={}
-config['batch_size']=1
+config['batch_size']=2
 config['max_seq_len']=200
 config['vocab_size']=32162
 config['lr']=2e-6
@@ -21,7 +21,7 @@ class Pretrainer:
     """
     构建预训练器
     """
-    def __init__(self,bert_model,vocab_size,max_seq_len,batch_size,lr,with_cuda=True,):
+    def __init__(self,bert_model,vocab_size,max_seq_len,batch_size,lr,with_cuda=True):
         self.vocab_size=vocab_size
         self.max_seq_len=max_seq_len
         self.batch_size=batch_size
@@ -89,7 +89,7 @@ class Pretrainer:
         print('Total Parameters:',sum([p.nelement() for p in self.bert_model.parameters()]))
 
 
-        # print(num)
+        print(next(self.bert_model.parameters()).data.dtype)
 
 
 
@@ -108,6 +108,9 @@ class Pretrainer:
     def load_model(self,model,dir_path='./output'):
         checkpoint_dir=self.find_most_recent_state_dict(dir_path)
         checkpoint=torch.load(checkpoint_dir)
+        # print(checkpoint)
+        a={k[5:]:v for k,v in checkpoint['model_state_dict'].items() if k[:4]=='bert' and 'pooler' not in k}
+        print(a)
         # 加载到的checkpoint为一个字典，字典里有每一层的参数值
         # print(checkpint)
         model.load_state_dict(checkpoint["model_state_dict"],strict=False)
@@ -157,15 +160,15 @@ class Pretrainer:
         total_element=0
 
         for i,data in data_iter:
-            print(type(data))
+            # print(type(data))
             data=self.padding(data)
-            {key:value.to(self.device) for key,value in data.items()}
+            data={key:value.to(self.device) for key,value in data.items()}
             # 位置编码的维度跟padding后的句子长度保持一致
             positional_enc=self.positional_enc[:,:data['bert_input'].size()[-1],:].to(self.device)
             mlm_preds,next_sen_preds=self.bert_model.forward(input_ids=data['bert_input'],
                                                              positional_enc=positional_enc,
                                                              token_type_ids=data['segment_label'])
-            print(next_sen_preds.argmax(dim=-1,keepdim=False))
+            # print(next_sen_preds.argmax(dim=-1,keepdim=False))
             mlm_acc=self.get_mlm_accuracy(mlm_preds,data['bert_label'])
             next_sen_acc=next_sen_preds.argmax(dim=-1,keepdim=False).eq(data['is_next']).sum().item()
             mlm_loss=self.compute_loss(mlm_preds,data['bert_label'],self.vocab_size,ignore_index=0)
@@ -219,7 +222,7 @@ class Pretrainer:
             log_dic={k:v for k,v in log_dic.items() if v!=0 and k!='epoch'}
             df=pd.read_pickle(df_path)
             df.reset_index(inplace=True,drop=True)
-            for k,v in log_dic.items:
+            for k,v in log_dic.items():
                 df.at[epoch,k]=v
             df.to_pickle(df_path)
             return float(log_dic['test_next_sen_loss'])+float(log_dic['test_mlm_loss'])
@@ -240,7 +243,7 @@ class Pretrainer:
         return mlm_accuracy.item()
         # (predictions==labels)
         # print(predictions==labels)
-        print(torch.sum(mask))
+        # print(torch.sum(mask))
 
     def padding(self,output_dic_lis):
         bert_input=[i['bert_input'] for i in output_dic_lis]
