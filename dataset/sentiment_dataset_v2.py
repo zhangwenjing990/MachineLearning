@@ -41,7 +41,7 @@ class CLSDataset(Dataset):
                     span_idx=random.randint(0,len(split_spans)-1)
                     cut_position=split_spans[span_idx][1]
                     if random.random()<0.5:
-                        if len(text)-cut_positon>2:
+                        if len(text)-cut_position>2:
                             text=text[cut_position:]
                         else:
                             text=text[:cut_position]

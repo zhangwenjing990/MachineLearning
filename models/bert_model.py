@@ -56,7 +56,14 @@ class BertEmbeddings(nn.Module):
         self.dropout=nn.Dropout(config.hidden_dropout_prob)
 
     def forward(self,input_ids,positional_enc,token_type_ids=None):
-
+        """
+        [batch_size,sequence_length] --> [batch_size,sequence_length,embedding_dim]
+        :param input_ids:
+        :param positional_enc:
+        :param token_type_ids:
+        :return:
+        """
+        # print('BertEmbeddings输入{}:'.format(input_ids.size()))
         words_embeddings=self.word_embeddings(input_ids)# [1, 138]-->[1, 138, 384]
         if token_type_ids is None:
             token_type_ids=torch.zeros_like(input_ids)
@@ -65,8 +72,8 @@ class BertEmbeddings(nn.Module):
         embeddings=words_embeddings+positional_enc+token_type_embeddings
         embeddings=self.LayerNorm(embeddings)
         embeddings=self.dropout(embeddings)
+        # print('BertEmbeddings输出{}:'.format(embeddings.size()))
         return embeddings
-        # print(embeddings)
 
 class BertLayerNorm(nn.Module):
     def __init__(self,hidden_size,eps=1e-12):
@@ -133,6 +140,7 @@ class BertSelfAttention(nn.Module):
         return x.permute(0,2,1,3)
 
     def forward(self,hidden_states,attention_mask,get_attention_matrices=False):
+        # print('BertSelfAttention的输入{}:'.format(hidden_states.size()))
         mixed_query_layer=self.query(hidden_states) #[1, 138, 384]
         mixed_key_layer = self.key(hidden_states)
         mixed_key_layer = self.value(hidden_states)
@@ -154,11 +162,11 @@ class BertSelfAttention(nn.Module):
         context_layer=context_layer.permute(0,2,1,3).contiguous()
         new_context_layer_shape=context_layer.size()[:-2]+(self.all_head_size,)
         context_layer=context_layer.view(*new_context_layer_shape)
+        # print('BertSelfAttention的输出{}:'.format(context_layer.size()))
 
         if get_attention_matrices:
             return context_layer,attention_probs_
         return context_layer,None
-        # print(context_layer.size())
 
 
 class BertSelfOutput(nn.Module):
@@ -170,9 +178,11 @@ class BertSelfOutput(nn.Module):
 
 
     def forward(self,hidden_states,input_tensor):
+        # print('BertSelfOutput的输入{}:'.format(hidden_states.size()))
         hidden_states=self.dense(hidden_states)
         hidden_states=self.dropout(hidden_states)
         hidden_states=self.LayerNorm(hidden_states+input_tensor)
+        # print('BertSelfOutput的输出{}:'.format(hidden_states.size()))
         return hidden_states
 
 class BertAttention(nn.Module):
@@ -196,10 +206,11 @@ class BertIntermediate(nn.Module):
         self.dense=nn.Linear(config.hidden_size,config.intermediate_size)
         self.intermediate_act_fn=ACT2FN[config.hidden_act]
     def forward(self,hidden_states):
-        # print(hidden_states)
+        # print('BertIntermediate的输入{}:'.format(hidden_states.size()))
         hidden_states=self.dense(hidden_states)
         # print(hidden_states)
         hidden_states=self.intermediate_act_fn(hidden_states)
+        # print('BertIntermediate的输出{}:'.format(hidden_states.size()))
         return hidden_states
 
 class BertOutput(nn.Module):
@@ -210,9 +221,11 @@ class BertOutput(nn.Module):
         self.LayerNorm=BertLayerNorm(config.hidden_size,eps=1e-12)
 
     def forward(self,hidden_states,input_tensor):
+        # print('BertOutput的输入{}:'.format(hidden_states.size()))
         hidden_states=self.dense(hidden_states)
         hidden_states=self.dropout(hidden_states)
         hidden_states=self.LayerNorm(hidden_states+input_tensor)
+        # print('BertOutput的输出{}:'.format(hidden_states.size()))
         return hidden_states
 
 class BertLayer(nn.Module):
@@ -261,9 +274,11 @@ class BertPooler(nn.Module):
         self.activation=nn.Tanh()
     def forward(self, hidden_states):
         # 取第0行，即CLS的embedding维
+        # print('BertPooler的输入{}:'.format(hidden_states.size()))
         first_token_tensor=hidden_states[:,0,:]
         pooled_output=self.dense(first_token_tensor)
         pooled_output=self.activation(pooled_output)
+        # print('BertPooler的输出{}:'.format(pooled_output.size()))
         return pooled_output
 
 
@@ -302,7 +317,7 @@ class BertModel(BertPreTrainedModel):
         if get_attention_matrices:
             return all_attention_matrices
         sequence_output=encoded_layers[-1]
-        # print(sequence_output)
+        # print(sequence_output.size())
         pooled_output=self.pooler(sequence_output)
         if not output_all_encoded_layers:
             encoded_layers=encoded_layers[-1]
@@ -385,8 +400,8 @@ class BertForPreTraining(BertPreTrainedModel):
 
 if __name__ == '__main__':
     #修改了路径****
-    # from Sentiment_Inference import Sentiment_Analysis
-    # model=Sentiment_Analysis(300,1)
+    from Sentiment_Inference import Sentiment_Analysis
+    model=Sentiment_Analysis(300,1)
     # #一个字符串代表一个seq
     # test_list=[
     #     "有几次回到酒店房间都没有被整理。两个人入住，只放了一套洗漱用品。",
@@ -401,13 +416,3 @@ if __name__ == '__main__':
     # config=BertConfig()
     # model=BertModel(config)
     # model(text_tokens_,positional_enc)
-
-    from tqdm import tqdm
-    import time
-    a = [1, 2, 3,4]
-    # b=tqdm(a)
-    # for i in b:
-    #     time.sleep(0.001)
-    #     print('zhang')
-    [i for i in tqdm(a)]
-    b.write('wen')

@@ -8,7 +8,7 @@ import pandas as pd
 import tqdm
 
 config={}
-config['batch_size']=2
+config['batch_size']=1
 config['max_seq_len']=200
 config['vocab_size']=32162
 config['lr']=2e-6

@@ -2,10 +2,15 @@ import torch.nn as nn
 from models.bert_model import *
 
 class Bert_Sentiment_Analysis(nn.Module):
+    """
+    情感分析模型
+    如果
+    """
     def __init__(self,config):
         super(Bert_Sentiment_Analysis,self).__init__()
         # 初始化Bert模型
         self.bert=BertModel(config)
+        # self.bert_parameters_num=sum([p.nelement() for p in self.bert.parameters()])
         # 初始化线性层
         self.final_dense=nn.Linear(config.hidden_size,1)
         # 初始化激活函数
@@ -35,9 +40,9 @@ class Bert_Sentiment_Analysis(nn.Module):
         # print(sequence_output)
         # 取CLS对应的维度
         # 为什么选择第一行进行二分类预测？？？？
-        first_token_tensor=sequence_output[:,0,:]
+        first_token_tensor=sequence_output[:,0,:] #[batch_size,1,hidden_dim]
 
-        predictions=self.final_dense(first_token_tensor)
+        predictions=self.final_dense(first_token_tensor) #[batch_size,1,1]
         predictions=self.activation(predictions)
 
         if labels is not None:
@@ -45,3 +50,13 @@ class Bert_Sentiment_Analysis(nn.Module):
             return predictions,loss
         else:
             return predictions
+
+if __name__ == '__main__':
+    config=BertConfig()
+    sentiment_model=Bert_Sentiment_Analysis(config)
+    parameters_num=sum([p.nelement() for p in sentiment_model.parameters()])
+    # print(sentiment_model.bert_parameters_num)
+    # print(parameters_num)
+    print([k for k in sentiment_model.state_dict()])
+    bert_model=BertModel(config)
+    print([k for k in bert_model.state_dict()])
